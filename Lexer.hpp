@@ -3,9 +3,11 @@
 
 #include <iostream>
 
+typedef enum {LETTER, NUMBER, WHITE_SPACE, END, NO_TYPE} InputCharType;
+
 class Lexer {
 public:
-    Lexer() = default;
+    Lexer() {readInput();};
     ~Lexer() = default;
 
     int gettok();
@@ -14,6 +16,11 @@ public:
 private:
     std::string m_IdentifierStr;
     int m_NumVal;
+    int character;
+    InputCharType input; // input symbol type
+    void readInput(void) ;
+
+
 };
 
 
@@ -65,7 +72,9 @@ enum Token {
     tok_downto =        -31,
 
     // keywords for array
-    tok_array =         -32
+    tok_array =         -32,
+
+    tok_break =        -33
 };
 
 #endif //PJPPROJECT_LEXER_HPP
