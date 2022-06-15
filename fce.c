@@ -12,3 +12,6 @@ int readln(int *x) {
     scanf("%d", x);
     return 0;
 }
+int dec(int x) {
+    return x-1;
+}
