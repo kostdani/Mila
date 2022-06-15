@@ -49,6 +49,8 @@ const struct {std::string slovo; Token symb;} keyWordTable[] = {
         {"and", tok_and},
         {"xor", tok_xor},
         {"break", tok_break},
+        {"to", tok_to},
+        {"downto", tok_downto},
         {"", (Token) 0}
 };
 int keyWord(std::string id) {
