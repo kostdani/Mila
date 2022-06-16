@@ -133,9 +133,9 @@ int Parser::NProgram::Generate( Parser::SymbTable &SymbTable){
         for (auto & Arg : F->args())
             Arg.setName("x");
     }
-    // create write function
+    // create dec function
     {
-        std::vector<llvm::Type*> Ints(1, llvm::Type::getInt32Ty(SymbTable.parser->MilaContext));
+        std::vector<llvm::Type*> Ints(1, llvm::Type::getInt32PtrTy(SymbTable.parser->MilaContext));
         llvm::FunctionType * FT = llvm::FunctionType::get(llvm::Type::getInt32Ty(SymbTable.parser->MilaContext), Ints, false);
         llvm::Function * F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "dec", SymbTable.parser->MilaModule);
         for (auto & Arg : F->args())
