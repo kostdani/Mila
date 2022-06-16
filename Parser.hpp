@@ -446,7 +446,7 @@ private:
         int Generate(SymbTable &SymbTable){
             // call writeln with value from lexel
             std::vector<llvm::Value *> argsv={};
-            if(callee=="readln"){
+            if(callee=="readln"||callee=="dec"){
                 SymbTable.parser->MilaBuilder.CreateCall(SymbTable.parser->MilaModule.getFunction(callee), {SymbTable.GetAddr(((NVarExpression *)args[0])->Val)});
                 return 1;
             }
