@@ -10,8 +10,56 @@ void CompareError(int s) {
     exit(1);
 }
 
+const struct {std::string slovo; Token symb;} keyWordTable[] = {
+        {"begin", tok_begin},
+        {"end", tok_end},
+        {"const", tok_const},
+        {"procedure", tok_procedure},
+        {"forward", tok_forward},
+        {"function", tok_function},
+        {"if", tok_if},
+        {"then", tok_then},
+        {"else", tok_else},
+        {"program", tok_program},
+        {"while", tok_while},
+        {"exit", tok_exit},
+        {"var", tok_var},
+        {"integer", tok_integer},
+        {"for", tok_for},
+        {"do", tok_do},
+        {"or", tok_or},
+        {"mod", tok_mod},
+        {"div", tok_div},
+        {"not", tok_not},
+        {"and", tok_and},
+        {"xor", tok_xor},
+        {"break", tok_break},
+        {"to", tok_to},
+        {"downto", tok_downto},
+        {"", (Token) 0}
+};
+
+std::string skeyWord(int id) {
+    int i = 0;
+    if(id>0){
+        std::string res="";
+        res.push_back((char)id);
+        return res;
+    }
+    if(id==tok_identifier)
+        return "identifier";
+    if(id==tok_number)
+        return "number";
+    while (!keyWordTable[i].slovo.empty())
+        if (id==keyWordTable[i].symb)
+            return keyWordTable[i].slovo;
+        else
+            i++;
+    return std::to_string(id);
+}
 void ExpansionError(std::string nonterminal, int s) {
-    printf("Error while expanding nonterminal %s, unexpected token %d.\n", nonterminal.c_str(),s);
+    std::string str=skeyWord(s);
+    printf("Error while expanding nonterminal %s, unexpected token %s.\n", nonterminal.c_str(),str.c_str());
     exit(1);
 }
 
@@ -57,7 +105,7 @@ llvm::Value *Parser::SymbTable::GetAddr(std::string name){
 llvm::FunctionCallee Parser::SymbTable::GetCallee(std::string name){
     if (CallTable.find(name) != CallTable.end())
         return CallTable[name];
-    return 0;
+    return llvm::FunctionCallee(0,0);
 }
 
 int Parser::NProgram::Generate( Parser::SymbTable &SymbTable){
@@ -637,10 +685,17 @@ std::vector<Parser::NDeclaration*> Parser::Function() {
             Compare(':');
             type=Type();
             Compare(';');
-            decs=Declarations();
-            block=Block();
-            Compare(';');
-            return {new NFunctionDeclaration(new NFunctionPrototype(name, args, type), decs, block)};
+            switch (CurTok) {/*
+                case tok_forward:
+                    Compare(tok_forward);
+                    Compare(';');
+                    return {new NFunctionPrototype(name, args, type)};*/
+                default:
+                    decs=Declarations();
+                    block=Block();
+                    Compare(';');
+                    return {new NFunctionDeclaration(new NFunctionPrototype(name, args, type), decs, block)};
+            }
         default:
             ExpansionError("F", CurTok);
             return {};
