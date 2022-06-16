@@ -1,4 +1,4 @@
-program isprime;
+program binary;
 
 var in:integer;
 procedure tobinr(n: integer);
