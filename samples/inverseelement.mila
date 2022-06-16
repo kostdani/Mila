@@ -1,4 +1,4 @@
-program reverse;
+program inversedelement;
 
 
 var n,m:integer;
