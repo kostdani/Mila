@@ -19,6 +19,7 @@ private:
     int character;
     InputCharType input; // input symbol type
     void readInput(void) ;
+    int base=10;
 
 
 };
