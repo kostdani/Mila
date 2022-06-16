@@ -1,0 +1,14 @@
+program isprime;
+
+var in:integer;
+procedure tobinr(n: integer);
+begin
+	if n=0 then exit;
+	tobinr(n div 2);
+	write(n mod 2);
+end;
+
+begin
+	readln(in);
+	tobinr(in);
+end.
