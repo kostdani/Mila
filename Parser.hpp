@@ -22,7 +22,11 @@
 class Parser {
 public:
     Parser();
-    ~Parser() = default;
+    ~Parser(){
+        if(tree)
+            delete tree;
+
+    };
 
     bool Parse();                    // parse
     const llvm::Module& Generate();  // generate
@@ -93,6 +97,12 @@ private:
         std::vector<NStatement *> block;
     public:
         NProgram(NProgramName *pname,std::vector<NDeclaration*> d,std::vector<NStatement *> b):pName(pname),decs(d),block(b){}
+        ~NProgram(){
+            for(auto d:decs)
+                delete d;
+            for(auto s:block)
+                delete s;
+        }
         int Generate( SymbTable &SymbTable) override;
     };
     class NConstDeclaration : public NDeclaration{
@@ -129,9 +139,20 @@ private:
 
         std::string type;
         NFunctionPrototype(const std::string &n,std::vector<NVarDeclaration*>& a,const std::string& t):name(n),args(a),type(t){}
-
+        ~NFunctionPrototype(){
+            for(auto a:args)
+                delete a;
+        }
         int Declare(SymbTable &SymbTable){
+            std::vector<llvm::Type*> fargs(args.size(),
+                                          llvm::Type::getInt32Ty(SymbTable.parser->MilaContext));
+            llvm::FunctionType *FT =llvm::FunctionType::get(llvm::Type::getInt32Ty(SymbTable.parser->MilaContext), fargs, false);
+            llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, SymbTable.parser->MilaModule);
+            unsigned Idx = 0;
+            for (auto &Arg : F->args())
+                Arg.setName(args[Idx++]->name);
 
+            SymbTable.AddFunc(name,llvm::FunctionCallee(FT,F));
             return 1;
             //    SymbTable[name]=llvm::ConstantInt::get(SymbTable.parser->MilaContext, llvm::APInt(32, 0));
         }
@@ -141,6 +162,10 @@ private:
         NExpression *right;
     public:
         NAssignment(const std::string &l,NExpression *r):left(l),right(r){}
+        ~NAssignment(){
+            if(right)
+                delete right;
+        }
         int Generate(SymbTable &SymbTable){
             auto ptr=SymbTable.GetAddr(left);
             SymbTable.parser->MilaBuilder.CreateStore(right->Value(SymbTable),ptr);
@@ -181,17 +206,22 @@ private:
         std::vector<NStatement*> block;
     public:
         NFunctionDeclaration(NFunctionPrototype* p,std::vector<NDeclaration*> d, std::vector<NStatement*> b): prototype(p),decs(d),block(b){}
+        ~NFunctionDeclaration(){
+            if(prototype)
+                delete prototype;
+            for(auto d:decs)
+                delete d;
+            for(auto s:block)
+                delete s;
+        }
         void PreDeclare(SymbTable &SymbTable){
             auto curblock =SymbTable.parser->MilaBuilder.GetInsertBlock();
-            std::vector<llvm::Type*> args(prototype->args.size(),
-                                          llvm::Type::getInt32Ty(SymbTable.parser->MilaContext));
-            llvm::FunctionType *FT =llvm::FunctionType::get(llvm::Type::getInt32Ty(SymbTable.parser->MilaContext), args, false);
-            llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, prototype->name, SymbTable.parser->MilaModule);
-            unsigned Idx = 0;
-            for (auto &Arg : F->args())
-                Arg.setName(prototype->args[Idx++]->name);
-
-            SymbTable.AddFunc(prototype->name,llvm::FunctionCallee(FT,F));
+            auto C=SymbTable.GetCallee(prototype->name);
+            if(!C.getCallee()) {
+                prototype->Declare(SymbTable);
+                C=SymbTable.GetCallee(prototype->name);
+            }
+            llvm::Function *F=(llvm::Function *)C.getCallee();
             auto st=SymbTable;
             for (int i =0;i<decs.size();++i){
                 decs[i]->PreDeclare(st);
@@ -230,7 +260,10 @@ private:
         std::string name;
         std::vector<NVarDeclaration*> args;
         NProcedurePrototype(const std::string &n,std::vector<NVarDeclaration*>& a):name(n),args(a){}
-
+        ~NProcedurePrototype(){
+            for(auto a:args)
+                delete a;
+        }
         void Declare(SymbTable &SymbTable){
             //SymbTable[name]=llvm::ConstantInt::get(SymbTable.parser->MilaContext, llvm::APInt(32, 0));
         }
@@ -242,6 +275,14 @@ private:
 
     public:
         NProcedureDeclaration(NProcedurePrototype* p,std::vector<NDeclaration*> d,  std::vector<NStatement*> b): prototype(p),decs(d),block(b){}
+        ~NProcedureDeclaration(){
+            if(prototype)
+                delete prototype;
+            for(auto d:decs)
+                delete d;
+            for(auto s:block)
+                delete s;
+        }
         void PreDeclare(SymbTable &SymbTable){
 
             auto curblock =SymbTable.parser->MilaBuilder.GetInsertBlock();
@@ -313,6 +354,10 @@ private:
         NExpression* expr;
     public:
         NUnaryExpression(std::string o, NExpression* e):operation(o),expr(e){}
+        ~NUnaryExpression(){
+            if(expr)
+                delete expr;
+        }
     };
     class NBinaryExpression : public NExpression{
         char operation;
@@ -320,6 +365,12 @@ private:
         NExpression* right;
     public:
         NBinaryExpression(char o, NExpression* e1, NExpression* e2):operation(o),left(e1),right(e2){}
+        ~NBinaryExpression(){
+            if(left)
+                delete left;
+            if(right)
+                delete right;
+        }
         llvm::Value *Value( SymbTable &SymbTable){
             llvm::Value *L = left->Value(SymbTable);
             llvm::Value *R = right->Value(SymbTable);
@@ -365,6 +416,10 @@ private:
         std::vector<NExpression *> args;
     public:
         NCallExpression(const std::string &c, std::vector<NExpression *> &a):callee(c),args(a){}
+        ~NCallExpression(){
+            for(auto a:args)
+                delete a;
+        }
         llvm::Value *Value( SymbTable &SymbTable){
             // call writeln with value from lexel
             std::vector<llvm::Value *> argsv;
@@ -384,6 +439,10 @@ private:
         std::vector<NExpression *> args;
     public:
         NCallStatement(const std::string &c, std::vector<NExpression *> &a):callee(c),args(a){}
+        ~NCallStatement(){
+            for(auto a:args)
+                delete a;
+        }
         int Generate(SymbTable &SymbTable){
             // call writeln with value from lexel
             std::vector<llvm::Value *> argsv={};
@@ -412,6 +471,14 @@ private:
         std::vector<NStatement *> el;
     public:
         NCondition(NExpression* ex,std::vector<NStatement *> t,std::vector<NStatement *> e):expr(ex),th(t),el(e){}
+        ~NCondition(){
+            if(expr)
+                delete expr;
+            for(auto s:th)
+                delete s;
+            for(auto s:el)
+                delete s;
+        }
         int Generate(SymbTable &SymbTable){
             llvm::Value *condv=expr->Value(SymbTable);
             if(!condv)
@@ -454,6 +521,12 @@ private:
         std::vector<NStatement *> body;
     public:
         NWhile(NExpression* ex,std::vector<NStatement *> b):expr(ex),body(b){}
+        ~NWhile(){
+            if(expr)
+                delete expr;
+            for(auto s:body)
+                delete s;
+        }
         int Generate(SymbTable &SymbTable){
             llvm::Function *TheFunction = SymbTable.parser->MilaBuilder.GetInsertBlock()->getParent();
 
@@ -500,7 +573,14 @@ private:
         std::string varname;
     public:
         NFor(char d,const std::string &varn,NExpression* ex1,NExpression* ex2,std::vector<NStatement *> b):varname(varn),direction(d),sexpr(ex1),eexpr(ex2),body(b){}
-
+        ~NFor(){
+            if(sexpr)
+                delete sexpr;
+            if(eexpr)
+                delete eexpr;
+            for(auto s:body)
+                delete s;
+        }
         int Generate(SymbTable &SymbTable){
             llvm::Function *TheFunction = SymbTable.parser->MilaBuilder.GetInsertBlock()->getParent();
 
@@ -595,6 +675,8 @@ private:
     NExpression *GPrime(NExpression * v);
     NExpression *Factor();
     NExpression *FactorPrime(std::string name);
+
+
 };
 
 
