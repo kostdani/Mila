@@ -1,0 +1,21 @@
+program reverse;
+
+
+var n,m:integer;
+function reverse(n, m: integer): integer;
+begin
+for i:=1 to m do
+	begin
+		if i*n mod m = 1 then
+			begin
+				reverse:=i;
+				exit;
+			end;
+	end;
+	reverse:=0;
+end;
+begin
+readln(n);
+readln(m);
+writeln(reverse(n,m));
+end.
