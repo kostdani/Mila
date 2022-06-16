@@ -21,6 +21,7 @@ void Lexer::readInput(void) {
         input = NO_TYPE;
 }
 
+
 const char oneChSymbTable[13] = {
         '+','-','*','/','=','.',',',';', '(', ')', '[', ']', 0
 };
@@ -53,6 +54,7 @@ const struct {std::string slovo; Token symb;} keyWordTable[] = {
         {"downto", tok_downto},
         {"", (Token) 0}
 };
+
 int keyWord(std::string id) {
     int i = 0;
     while (!keyWordTable[i].slovo.empty())
@@ -62,7 +64,6 @@ int keyWord(std::string id) {
             i++;
     return tok_identifier;
 }
-
 int isOneChTok(char character){
     int i = 0;
     while (oneChSymbTable[i])
@@ -92,6 +93,16 @@ int Lexer::gettok()
         case ':':
             readInput();
             goto q5;
+        case '$':
+            base=16;
+            this->m_NumVal=0;
+            readInput();
+            goto q3;
+        case '&':
+            base=8;
+            this->m_NumVal=0;
+            readInput();
+            goto q3;
         default:
             if(isOneChTok(character)) {
                 char ch = character;
@@ -110,6 +121,7 @@ int Lexer::gettok()
             readInput();
             goto q2;
         case NUMBER:
+            base=10;
             this->m_NumVal=character-'0';
             readInput();
             goto q3;
@@ -166,9 +178,20 @@ int Lexer::gettok()
     q3:
     switch(input) {
         case NUMBER:
-            digit = (character - '0');
+        case LETTER:
+            if (character >= 'a') {
+                digit = (character - 'a') + 10;
+            } else if (character >= 'A') {
+                digit = (character - 'A') + 10;
+            } else {
+                digit = (character - '0');
+            }
+            if (digit >= base) {
+                printf("Digit %c not allowed in %d base!",character,base);
+                exit(1);
+            }
 
-            m_NumVal = 10 * m_NumVal + digit;
+            m_NumVal = base * m_NumVal + digit;
             readInput();
             goto q3;
         default:
