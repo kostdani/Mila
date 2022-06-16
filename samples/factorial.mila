@@ -7,7 +7,7 @@ begin
     begin
         facti := facti * n;
         dec(n);
-    end
+    end;
 end;    
 
 function factr(n : integer) : integer;
